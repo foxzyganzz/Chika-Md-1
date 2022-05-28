@@ -26,6 +26,8 @@ const { FajarNews, BBCNews, metroNews, CNNNews, iNews, KumparanNews, TribunNews,
 
 // Function
 const cerpen = require('./lib/cerpen')
+const { addCommands, checkCommands, deleteCommands } = require('./lib/autoresp')
+const commandsDB = JSON.parse(fs.readFileSync('./database/commands.json'))
 
 // Read Database
 let tebaklagu = db.data.game.tebaklagu = []
@@ -67,6 +69,8 @@ module.exports = chika = async (chika, m, chatUpdate, store) => {
         const mime = (quoted.msg || quoted).mimetype || ''
 	    const isMedia = /image|video|sticker|audio/.test(mime)
 	    const from = mek.key.remoteJid
+		const arg = budy.slice(command.length + 2, budy.length)
+		const sender = mek.key.fromMe ? chika.user.jid : m.isGroup ? mek.participant : mek.key.remoteJid
 	
         // Time & Date
         const time = moment(Date.now()).tz('Asia/Jakarta').locale('id').format('HH:mm:ss z')
@@ -168,7 +172,8 @@ module.exports = chika = async (chika, m, chatUpdate, store) => {
             scheduled: true,
             timezone: "Asia/Jakarta"
         })
-        
+  
+		
 	// auto set bio
 	if (db.data.settings[botNumber].autobio) {
 	    let setting = global.db.data.settings[botNumber]
@@ -199,6 +204,12 @@ module.exports = chika = async (chika, m, chatUpdate, store) => {
       return
       }
 
+//auto respon
+for (var i = 0; i < commandsDB.length ; i++) {
+				if (budy.toLowerCase() === commandsDB[i].pesan) {
+					reply(commandsDB[i].balasan)
+				}
+			}
         // Respon Cmd with media
         if (isMedia && m.msg.fileSha256 && (m.msg.fileSha256.toString('base64') in global.db.data.sticker)) {
         let hash = global.db.data.sticker[m.msg.fileSha256.toString('base64')]
@@ -2910,6 +2921,32 @@ Lihat list Pesan Dengan ${prefix}listmsg`)
 		reply(`Berhasil menghapus '${text}' dari list pesan`)
             }
 	    break
+		
+		case 'addrespon':
+			if (!m.isGroup && !mek.key.fromMe && !isAdmins) return reply(`Khusus Group`)
+				if (args.length < 1) return reply(`Penggunaan ${prefix}addrespon hai|hai juga`)
+				argz = arg.split('|')
+				if (checkCommands(argz[0], commandsDB) === true) return reply(`Udah ada`)
+				addCommands(argz[0], argz[1], sender, commandsDB)
+				reply(`Sukses menambahkan respon ${argz[0]}`)
+				break
+			case 'delrespon':
+			if (!m.isGroup && !mek.key.fromMe && !isAdmins) return reply(`Khusus Group`)
+				if (args.length < 1) return reply(`Penggunaan ${prefix}delrespon hai`)
+				if (!checkCommands(body.slice(11), commandsDB)) return reply(`Ga ada di database`)
+                deleteCommands(body.slice(11), commandsDB)
+				reply(`Sukses menghapus respon ${body.slice(11)}`)
+				break
+				case 'listrespon':
+              if (!mek.key.fromMe && !isAdmins) return reply(`Khusus Admin`)
+teks = `\`\`\`『 LIST RESPON 』\`\`\`\n\n`
+for (let i = 0; i < commandsDB.length; i ++){
+teks += `❏ *Tanya:* ${commandsDB[i].pesan}\n`
+teks += `❏ *Balasan:* ${commandsDB[i].balasan}\n`
+teks += `❏ *Creator:* ${commandsDB[i].creator}\n\n`
+}
+reply(teks)
+break
 	    case 'anonymous': {
                 if (m.isGroup) return reply('Fitur Tidak Dapat Digunakan Untuk Group!')
 				this.anonymous = this.anonymous ? this.anonymous : {}
